@@ -1,0 +1,27 @@
+id: int = Field(gt=0)
+id harus integer dan harus lebih besar dari 0.
+
+stok: int = Field(ge=0)
+stok boleh 0, tetapi tidak boleh negatif.
+
+gt = greater than
+id > 0
+
+min_length = panjang minimum
+nama minimal 1 karakter
+
+ge = greater than or equal
+stok >= 0
+
+
+# 1. Saring data yang dikirim client saja (abaikan yang None)
+            data_perubahan = data.model_dump(exclude_unset=True)
+            
+            # 2. Timpa data lama dengan data_perubahan
+            item.update(data_perubahan)
+
+
+coba jelaskan, kenapa harus di tambahkan , response_model=Produk?
+
+Pertanyaan yang sangat bagus! Menambahkan response_model=Produk 
+itu ibarat menempatkan petugas Quality Control (QC) di pintu keluar aplikasi API kamu.
