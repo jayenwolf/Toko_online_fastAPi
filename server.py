@@ -4,8 +4,19 @@ from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel 
 from fastapi import FastAPI, File, UploadFile
 import shutil
+from fastapi.middleware.cors import CORSMiddleware
 # Membuat aplikasi FastAPI
 app = FastAPI()
+
+
+# Tambahkan izin CORS ini
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Mengizinkan semua frontend mengakses
+    allow_credentials=True,
+    allow_methods=["*"],  # Mengizinkan semua method (GET, POST, PUT, DELETE)
+    allow_headers=["*"],
+)
 
 class ProdukBaru(BaseModel):
     nama: str # kenapa harus str karena nama itu wajib teks
@@ -135,6 +146,8 @@ def upload_gambar(id_produk: int, file: UploadFile = File(...)):
         perintah_sql = "UPDATE produk SET gambar = %s WHERE id = %s;"
 
         ambil_data.execute(perintah_sql, (file.filename, id_produk))
+
+        koneksi.commit()
 
         ambil_data.close()
         koneksi.close()
