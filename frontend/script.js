@@ -7,10 +7,10 @@ fetch("http://localhost:8000/api/produk")
         const daftarProduk = dataApi.data; // Mengambil array data dari JSON
         const wadah = document.getElementById("wadah-produk");
 
-        // Kosongkan wadah teks "Memuat..." sebelumnya
+        
         wadah.innerHTML = "";
 
-        // 2. Perulangan (looping) untuk membuat kartu produk satu per satu
+        
         daftarProduk.forEach(item => {
             const kartu = `
                 <div class="kartu-produk">
@@ -21,7 +21,7 @@ fetch("http://localhost:8000/api/produk")
                 </div>
             `;
             
-            // Masukkan kartu ke dalam HTML
+    
             wadah.innerHTML += kartu;
         });
     })
