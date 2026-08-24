@@ -1,4 +1,4 @@
-# 🛒 Toko Online - FastAPI & Vanilla JavaScript
+# 🛒 Toko Online - FastAPI & JavaScript
 
 Proyek ini adalah sistem e-commerce sederhana yang dibangun dengan memisahkan arsitektur *Backend* (API) dan *Frontend*. Proyek ini dirancang untuk mempelajari konsep integrasi API, pengolahan database relasional, dan manipulasi DOM (Document Object Model) secara dinamis.
 
