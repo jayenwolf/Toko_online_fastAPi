@@ -2,7 +2,8 @@ from fastapi import FastAPI
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel 
-
+from fastapi import FastAPI, File, UploadFile
+import shutil
 # Membuat aplikasi FastAPI
 app = FastAPI()
 
@@ -110,3 +111,36 @@ def hapus_produk(id_produk: int):
 
     except Exception as error:
         return {"pesan": "Gagal menghapus produk", "error": str(error)}
+
+@app.post("/api/upload-gambar/{id_produk}")
+def upload_gambar(id_produk: int, file: UploadFile = File(...)):
+    try:
+        # membuat rute lokasi penyimpanan (mengarah ke folder img)
+        lokasi_simpan = f"img/{file.filename}"
+
+        # untuk menyimpan file foto ke dalam folder berupa fisik(didalam folder img)
+        with open(lokasi_simpan, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        koneksi = psycopg2.connect(
+            user = "postgres",
+            password = "1234",
+            host = "localhost",
+            port = "5432",
+            database = "postgres"
+        )
+
+        ambil_data = koneksi.cursor()
+
+        perintah_sql = "UPDATE produk SET gambar = %s WHERE id = %s;"
+
+        ambil_data.execute(perintah_sql, (file.filename, id_produk))
+
+        ambil_data.close()
+        koneksi.close()
+
+        
+        return {"pesan": f"Gambar {file.filename} sukses disimpan untuk barang ID {id_produk}!"}
+        
+    except Exception as error:
+        return {"pesan": "Gagal menyimpan gambar", "error": str(error)}
