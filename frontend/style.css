@@ -1,0 +1,54 @@
+
+.kartu-produk {
+    width: 250px; /* Lebar kartu */
+    border: 1px solid #ddd; /* Garis pinggir abu-abu tipis */
+    border-radius: 10px; /* Membuat ujung pinggiran kartu melengkung/tidak tajam */
+    padding: 15px; /* Memberi ruang bernapas di dalam kartu */
+    text-align: center; /* Membuat semua teks berada di tengah */
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); /* Memberi efek bayangan lembut di belakang kartu */
+    font-family: sans-serif; /* Mengubah jenis huruf agar lebih modern */
+}
+
+/*  Mengatur gambar agar rapi */
+.kartu-produk img {
+    width: 100%; /* Memaksa gambar menyesuaikan lebar kartu */
+    border-radius: 8px; /* Ujung gambar ikut melengkung */
+}
+
+
+.kartu-produk p {
+    color: #e74c3c; /* Memberi warna merah pada harga */
+    font-weight: bold; /* Menebalkan teks */
+    font-size: 18px; /* Membesarkan ukuran teks harga */
+}
+
+
+.kartu-produk button {
+    background-color: #27ae60; /* Tombol warna hijau */
+    color: white; /* Teks warna putih */
+    border: none; /* Menghilangkan garis pinggir bawaan tombol yang jelek */
+    padding: 10px; /* Membesarkan area dalam tombol */
+    width: 100%; /* Tombol melebar penuh kiri-ke-kanan */
+    border-radius: 5px; /* Ujung tombol melengkung */
+    font-weight: bold;
+    cursor: pointer; /* Kursor mouse berubah jadi tangan saat diarahkan */
+}
+
+/* Efek animasi kecil saat tombol disentuh mouse (hover) */
+.kartu-produk button:hover {
+    background-color: #1e8449; /* Warna hijau berubah lebih gelap saat disentuh */
+}
+
+
+
+.kumpulan-produk {
+    display: flex; /* Mengubah susunan bawaan (atas-bawah) menjadi kiri-ke-kanan */
+    gap: 20px; /* Memberi jarak aman antar kartu sebesar 20 pixel */
+    justify-content: center; /* Mendorong semua kartu agar berada di tengah-tengah layar */
+    flex-wrap: wrap; /* Jika layar kekecilan (seperti di HP), kartu akan otomatis turun ke baris bawah */
+    padding: 30px; /* Memberi jarak antara wadah dengan ujung layar browser */
+}
+
+/* 
+(Biarkan kode .kartu-produk dan yang lainnya tetap ada di bawah sini)
+*/
