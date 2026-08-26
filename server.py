@@ -5,9 +5,17 @@ from pydantic import BaseModel
 from fastapi import FastAPI, File, UploadFile
 import shutil
 from fastapi.middleware.cors import CORSMiddleware
+from auth import acak_password, cek_pw
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+
 # Membuat aplikasi FastAPI
 app = FastAPI()
 
+# untuk alat baca
+security = HTTPBearer()
 
 # Tambahkan izin CORS ini
 app.add_middleware(
@@ -18,10 +26,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def verifikasi(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        # untuk membuat token menggunakan kunci rahasia yang sama saat login
+        payload = jwt.decode(token, "rahasia123", algorithms=["HS256"])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=401,
+                detail="token tidak valid!"
+            )
+        return username
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="token salah"
+        )
+    
 class ProdukBaru(BaseModel):
     nama: str # kenapa harus str karena nama itu wajib teks
     harga: int # kenapa harga wajib angka karena bilangan bulat
     stok : int # kenapa stok wajib angka karena bilangan bulat
+
+class UserBaru(BaseModel):
+    username: str
+    password: str
 
 @app.get("/api/produk")
 def ambil_semua_produk():
@@ -49,7 +79,7 @@ def ambil_semua_produk():
         return {"pesan": "Gagal!", "error": str(error)}
 
 @app.post("/api/tambah-produk")
-def tambah_produk(data: ProdukBaru):
+def tambah_produk(data: ProdukBaru, username: str = Depends(verifikasi)):
     try:
         koneksi = psycopg2.connect(
             user = "postgres",
@@ -188,3 +218,89 @@ def stok_kurang(id_produk: int):
     finally:
         ambil_data.close()
         koneksi.close()
+
+@app.post("/api/register")
+def register_admin(data: UserBaru):
+    try:
+        # untuk memasukan pw agar bisa diajak sebelum disimpan
+        safe_pw = acak_password(data.password)
+
+        # untuk membuat koneksi ke database postgreSQL nya
+
+        koneksi = psycopg2.connect(
+            user="postgres",
+            password="1234",
+            host="localhost",
+            port="5432",
+            database="postgres"
+        )
+
+        ambil_data = koneksi.cursor()
+
+        # menyimpan username dan pw yang sdah di acak ke tabel user
+        sql_command = "INSERT INTO users (username, password) VALUES (%s, %s)"
+
+        # simpan permanen
+        ambil_data.execute(sql_command, (data.username.lower(), safe_pw))
+        koneksi.commit()
+
+        ambil_data.close()
+        koneksi.close()
+
+        return {"pesan": f"Admin '{data.username}' berhasil didaftarkan dengan aman!"}
+
+    except Exception as error:
+        return {"pesan": "Gagal mendaftar admin", "error": str(error)}
+
+
+
+pw = "rahasia123"
+
+
+@app.post("/api/login")
+def login_admin(data: UserBaru):
+    try:
+        # untuk membuat koneksi ke database mencari username
+        koneksi = psycopg2.connect(
+            user="postgres",
+            password="1234",
+            host="localhost",
+            port="5432",
+            database="postgres"
+        )
+
+        ambil_data = koneksi.cursor()
+
+        # untuk mencari data user berdasarkan username
+        perintah_sql = "SELECT id, username, password FROM users WHERE username = %s"
+        ambil_data.execute(perintah_sql, (data.username.lower(),))
+        user = ambil_data.fetchone()
+
+        ambil_data.close()
+        koneksi.close()
+
+        # jika username tidak ditemukan
+        if not user: 
+            return{"pesan": "Username atau password salah!"}, 401
+
+        # variable database user[0] = id, user[1] = username, user[2] = password_acak
+        password_acakDB = user[2]
+
+        # cocokan pw yang diketik dengan pw acak di database
+        cek = cek_pw(data.password, password_acakDB)
+
+        if not cek:
+            return {"pesan": "Username atau password salah!"}, 401
+
+        # jika cocok, bisa masuk
+        payload = {"sub": user[1]} # untuk menyimpan username
+        token_akses = jwt.encode(payload, pw, algorithm="HS256")
+
+        return {
+            "pesan": f"Login berhasil! Selamat datang kembali, {user[1]}",
+            "token_akses": token_akses,
+            "tipe_token": "bearer"
+        }
+
+    except Exception as error:
+        return {"pesan": "Terjadi kesalahan saat login", "error": str(error)}, 500
