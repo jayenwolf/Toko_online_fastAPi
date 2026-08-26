@@ -157,3 +157,34 @@ def upload_gambar(id_produk: int, file: UploadFile = File(...)):
         
     except Exception as error:
         return {"pesan": "Gagal menyimpan gambar", "error": str(error)}
+
+@app.patch("/produk/beli/{id_produk}")
+def stok_kurang(id_produk: int):
+    koneksi = psycopg2.connect(
+        user="postgres", 
+        password="1234", 
+        database="postgres", 
+        host="localhost", 
+        port="5432"
+    )
+
+    ambil_data = koneksi.cursor()
+
+    # mengurangi stok sebanyak 1 berdasarkan id ini perintah sqlnya
+    command_sql = "UPDATE produk SET stok = stok - 1 WHERE id = %s RETURNING nama, stok;"
+
+    try:
+        ambil_data.execute(command_sql, (id_produk,))
+        produk_update = ambil_data.fetchone() # untuk mengambil hasil update
+        koneksi.commit() # menyimpan perubahan secara permanen
+
+        if produk_update:
+            return {"pesan": "Berhasil beli", "nama": produk_update[0], "stok_sisa": produk_update[1]}
+        else:
+            return {"pesan": "Produk tidak ditemukan"}
+    except Exception as e:
+        return {"error": str(e)}
+
+    finally:
+        ambil_data.close()
+        koneksi.close()
