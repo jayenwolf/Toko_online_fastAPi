@@ -3,18 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toko Online</title>
-
+    <title>Toko Online Kopdes</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-
+    <!-- Bagian Tampilan Produk dari Database -->
+    <h1>Daftar Produk</h1>
     <div class="kumpulan-produk" id="wadah-produk">
         <p>Memuat produk dari database...</p>
     </div>
 
+    <hr style="margin: 40px 0;">
 
+    <!-- Bagian Form Login Admin (Akan disembunyikan jika sudah login) -->
+    <div class="login-container">
+        <h2>Login Admin Kopdes</h2>
+        <input type="text" id="usernameInput" placeholder="Masukkan username...">
+        <br><br>
+        <input type="password" id="passwordInput" placeholder="Masukkan password...">
+        <br><br>
+        <button onclick="prosesLogin()">Masuk</button>
+        <p id="pesanStatus"></p>
+    </div>
+
+    <!-- Khusus Panel Admin (Hanya muncul jika sudah login) -->
+    <div id="panelAdmin" style="display: none; background: #f4f4f4; padding: 20px; border-radius: 8px; margin-top: 20px;">
+        <button onclick="prosesLogout()" style="background-color: #d9534f; color: white; float: right;">Logout Admin</button>
+        <h2>Panel Kontrol Admin</h2>
+
+        <h3>Tambah Produk Baru</h3>
+        <input type="text" id="namaProdukBaru" placeholder="Nama Produk...">
+        <br><br>
+        <input type="number" id="hargaProdukBaru" placeholder="Harga Produk...">
+        <br><br>
+        <input type="number" id="stokProdukBaru" placeholder="Stok Produk...">
+        <br><br>
+        <button onclick="kirimProdukBaru()">Tambah ke Toko</button>
+        <p id="pesanTambahStatus"></p>
+    </div>
+
+    <!-- Panggil file JavaScript eksternal -->
     <script src="script.js"></script>
 </body>
 </html>
