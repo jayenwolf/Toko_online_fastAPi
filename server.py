@@ -9,13 +9,23 @@ from auth import acak_password, cek_pw
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from datetime import datetime, timedelta, timezone
 
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+JWT_SECRET = os.getenv("JWT_SECRET")
 
 # Membuat aplikasi FastAPI
 app = FastAPI()
 
 # untuk alat baca
 security = HTTPBearer()
+
 
 # Tambahkan izin CORS ini
 app.add_middleware(
@@ -28,20 +38,32 @@ app.add_middleware(
 
 def verifikasi(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
+
     try:
-        # untuk membuat token menggunakan kunci rahasia yang sama saat login
-        payload = jwt.decode(token, "rahasia123", algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=["HS256"]
+        )
         username = payload.get("sub")
         if username is None:
             raise HTTPException(
                 status_code=401,
-                detail="token tidak valid!"
+                detail="Token tidak valid!"
             )
+
         return username
-    except jwt.PyJWTError:
+
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=401,
-            detail="token salah"
+            detail="Token sudah kedaluwarsa. Silakan login kembali!"
+        )
+
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Token salah tidak valid!"
         )
     
 class ProdukBaru(BaseModel):
@@ -58,7 +80,7 @@ def ambil_semua_produk():
     try:
         koneksi = psycopg2.connect(
             user = "postgres",
-            password = "1234",
+            password = DB_PASSWORD,
             host = "localhost",
             port = "5432",
             database = "postgres"
@@ -67,7 +89,7 @@ def ambil_semua_produk():
         # untuk mengambil RealDictCursor
         ambil_data = koneksi.cursor(cursor_factory=RealDictCursor) 
 
-        # untuk mengambil semua data dan juga perintah sql untuk menggunkan tabel
+        
         ambil_data.execute("SELECT * FROM produk;")
         semua_produk = ambil_data.fetchall()
 
@@ -83,7 +105,7 @@ def tambah_produk(data: ProdukBaru, username: str = Depends(verifikasi)):
     try:
         koneksi = psycopg2.connect(
             user = "postgres",
-            password = "1234",
+            password = DB_PASSWORD,
             host = "localhost",
             port = "5432",
             database = "postgres"
@@ -91,6 +113,7 @@ def tambah_produk(data: ProdukBaru, username: str = Depends(verifikasi)):
 
         ambil_data = koneksi.cursor()
 
+        #  command sql ini untuk menjalankan dan memasukan data baru ke tabel produk
         command_sql = "INSERT INTO produk (nama, harga, stok) VALUES (%s, %s, %s)"
         data_isi = (data.nama.lower(), data.harga, data.stok)
 
@@ -103,14 +126,18 @@ def tambah_produk(data: ProdukBaru, username: str = Depends(verifikasi)):
         return {"pesan": f"Produk {data.nama} berhasil ditambahkan!"}
 
     except Exception as error:
-        return {"pesan": "Gagal menambah produk", "error": str(error)}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Gagal menambah produk: {str(error)}"
+        )
 
+    
 @app.put("/api/ubah-produk/{id_produk}")
-def ubah_produk(id_produk: int, data: ProdukBaru):
+def ubah_produk(id_produk: int, data: ProdukBaru, username: str = Depends(verifikasi)):
     try:
         koneksi = psycopg2.connect(
             user = "postgres",
-            password = "1234",
+            password = DB_PASSWORD,
             host = "localhost",
             port = "5432",
             database = "postgres"
@@ -125,17 +152,20 @@ def ubah_produk(id_produk: int, data: ProdukBaru):
         ambil_data.execute(perintah_sql, data_isi)
         koneksi.commit()  
 
+        ambil_data.close()
+        koneksi.close()
+
         return {"pesan": f"Produk dengan ID {id_produk} berhasil diubah!"}
 
     except Exception as error:
         return {"pesan": "Gagal mengubah produk", "error": str(error)}
 
 @app.delete("/api/hapus-produk/{id_produk}")
-def hapus_produk(id_produk: int):
+def hapus_produk(id_produk: int, username: str = Depends(verifikasi)): # mmasang verifikasi
     try:
         koneksi = psycopg2.connect(
             user = "postgres",
-            password = "1234",
+            password = DB_PASSWORD,
             host = "localhost",
             port = "5432",
             database = "postgres"
@@ -145,16 +175,17 @@ def hapus_produk(id_produk: int):
         perintah_sql = "DELETE FROM produk WHERE id = %s;"
 
         ambil_data.execute(perintah_sql, (id_produk,))
+        koneksi.commit()
         ambil_data.close()
         koneksi.close()
 
-        return {"pesan": f"Produk dengan ID {id_produk} berhasil dihapus!"}
 
+        return {"pesan": f"Produk ID {id_produk} berhasil dihapus oleh admin {username}!"}
     except Exception as error:
         return {"pesan": "Gagal menghapus produk", "error": str(error)}
 
 @app.post("/api/upload-gambar/{id_produk}")
-def upload_gambar(id_produk: int, file: UploadFile = File(...)):
+def upload_gambar(id_produk: int, file: UploadFile = File(...), username: str = Depends(verifikasi)):
     try:
         # membuat rute lokasi penyimpanan (mengarah ke folder img)
         lokasi_simpan = f"img/{file.filename}"
@@ -165,7 +196,7 @@ def upload_gambar(id_produk: int, file: UploadFile = File(...)):
 
         koneksi = psycopg2.connect(
             user = "postgres",
-            password = "1234",
+            password = DB_PASSWORD,
             host = "localhost",
             port = "5432",
             database = "postgres"
@@ -192,7 +223,7 @@ def upload_gambar(id_produk: int, file: UploadFile = File(...)):
 def stok_kurang(id_produk: int):
     koneksi = psycopg2.connect(
         user="postgres", 
-        password="1234", 
+        password=DB_PASSWORD, 
         database="postgres", 
         host="localhost", 
         port="5432"
@@ -201,7 +232,7 @@ def stok_kurang(id_produk: int):
     ambil_data = koneksi.cursor()
 
     # mengurangi stok sebanyak 1 berdasarkan id ini perintah sqlnya
-    command_sql = "UPDATE produk SET stok = stok - 1 WHERE id = %s RETURNING nama, stok;"
+    command_sql = "UPDATE produk SET stok = stok - 1 WHERE id = %s AND stok > 0 RETURNING nama, stok;"
 
     try:
         ambil_data.execute(command_sql, (id_produk,))
@@ -229,7 +260,7 @@ def register_admin(data: UserBaru):
 
         koneksi = psycopg2.connect(
             user="postgres",
-            password="1234",
+            password=DB_PASSWORD,
             host="localhost",
             port="5432",
             database="postgres"
@@ -254,16 +285,13 @@ def register_admin(data: UserBaru):
 
 
 
-pw = "rahasia123"
-
-
 @app.post("/api/login")
 def login_admin(data: UserBaru):
     try:
         # untuk membuat koneksi ke database mencari username
         koneksi = psycopg2.connect(
             user="postgres",
-            password="1234",
+            password=DB_PASSWORD,
             host="localhost",
             port="5432",
             database="postgres"
@@ -280,9 +308,11 @@ def login_admin(data: UserBaru):
         koneksi.close()
 
         # jika username tidak ditemukan
-        if not user: 
-            return{"pesan": "Username atau password salah!"}, 401
-
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Username atau password salah!"
+            )
         # variable database user[0] = id, user[1] = username, user[2] = password_acak
         password_acakDB = user[2]
 
@@ -290,11 +320,25 @@ def login_admin(data: UserBaru):
         cek = cek_pw(data.password, password_acakDB)
 
         if not cek:
-            return {"pesan": "Username atau password salah!"}, 401
+            raise HTTPException(
+                status_code=401,
+                detail="Username atau password salah!"
+        )
 
         # jika cocok, bisa masuk
-        payload = {"sub": user[1]} # untuk menyimpan username
-        token_akses = jwt.encode(payload, pw, algorithm="HS256")
+        waktu_expired = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        payload = {
+            "sub": user[1],
+            "exp": waktu_expired
+        }
+
+        token_akses = jwt.encode(
+            payload,
+            JWT_SECRET,
+            algorithm="HS256"
+        )
+
 
         return {
             "pesan": f"Login berhasil! Selamat datang kembali, {user[1]}",
@@ -302,5 +346,11 @@ def login_admin(data: UserBaru):
             "tipe_token": "bearer"
         }
 
+    except HTTPException:
+        raise
+
     except Exception as error:
-        return {"pesan": "Terjadi kesalahan saat login", "error": str(error)}, 500
+        raise HTTPException(
+            status_code=500,
+            detail=f"Terjadi kesalahan saat login: {str(error)}"
+        )
